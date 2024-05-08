@@ -41,3 +41,23 @@ jobs:
           docker build -t $ECR_REGISTRY/s3_githubactions:github.sha -f dockerfile.yml .
           docker push $ECR_REGISTRY/s3_githubactions:github.sha
           echo "image=$ECR_REGISTRY/s3_githubactions:github.sha" >> $GITHUB_OUTPUT
+
+      - name: Create ECS Cluster
+        run: |
+          aws ecs create-cluster --cluster-name nginx-cluster
+     # Step to register task definition
+      - name: Register Task Definition
+        run: |
+          aws ecs register-task-definition \
+            --family nginx-task \
+            --container-definitions '[{"name":"s3_githubactions","image":"211125689815.dkr.ecr.us-east-2.amazonaws.com/s3_githubactions","portMappings":[{"containerPort":80}],"memoryReservation":128}]'
+     # Step to create ECS service
+      - name: Create ECS Service
+        run: |
+          aws ecs create-service \
+            --cluster nginx-cluster \
+            --service-name nginx-service \
+            --task-definition nginx-task \
+            --desired-count 1 \
+            --launch-type EC2 \
+            --region ${{ env.AWS_REGION }}
